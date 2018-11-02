@@ -30,7 +30,7 @@ class Client:
         @return True if the game is over, false either
     """
     def IsGameOver(self):
-        infof = open('./0/infos.txt', 'r')
+        infof = open('./{}/infos.txt'.format(self.id), 'r')
         lines = infof.readlines()
         infof.close()
         if len(lines) > 0 and "Score final" in lines[-1]:
