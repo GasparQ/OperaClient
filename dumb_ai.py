@@ -3,7 +3,10 @@ import random
 
 
 class DumbAI(AI):
-    def PickTile(self, tiles):
+    def OnTurnBegins(self):
+        pass
+
+    def PickTile(self, game, tiles):
         return random.choice(tiles)
 
     def GetPowerChoice(self, game, tile):

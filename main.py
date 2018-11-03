@@ -23,6 +23,9 @@ print(game.board)
 while not game.IsOver():
     tiles = game.PickTiles()
 
+    for p in game.players:
+        game.players.OnTurnBegins()
+
     game.PlayTurn(GAME_DATA.INSPECTOR_PLAYER, tiles)
     game.PlayTurn(GAME_DATA.PHANTOM_PLAYER, tiles)
     game.PlayTurn(GAME_DATA.PHANTOM_PLAYER, tiles)
