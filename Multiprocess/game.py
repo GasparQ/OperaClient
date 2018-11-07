@@ -156,9 +156,9 @@ class Game:
                 print('connection from', client_address)
                 data = connection.recv(128)
                 str_data = data.decode("utf-8")[8:]
-                if str_data == "0":
+                if str_data == "1":
                     self.ghost = connection
-                elif str_data == "1":
+                elif str_data == "0":
                     self.detective = connection
                 else:
                     print(data)

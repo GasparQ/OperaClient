@@ -19,7 +19,7 @@ class Client:
         sys.modules["client_ai"] = module_ia
         cls_members = inspect.getmembers(sys.modules["client_ai"], inspect.isclass)
         ai = getattr(module_ia, cls_members[1][0])
-        self.ai = ai(self.server_id, 0 if is_ghost else 1)
+        self.ai = ai(self.server_id, 1 if is_ghost else 0)
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,7 +32,7 @@ class Client:
             print("something's wrong with %s:%d. Exception is %s" % ('localhost', self.port, e))
             self.sock.close()
 
-        self.send("CONNECT:" + ("0" if self.is_ghost else "1"))
+        self.send("CONNECT:" + ("1" if self.is_ghost else "0"))
 
     def send(self, message):
         # print("Send from " + ("ghost" if self.is_ghost else "detective") + " : " + message)
@@ -44,8 +44,7 @@ class Client:
             data = self.sock.recv(128)
             str_data = data.decode("utf-8")
             if str_data != "":
-                self.ai.update_state()
-                data = self.ai.play(str_data)
+                data = self.ai.__play__(str_data)
                 self.sock.sendall(data.encode())
             else:
                 self.sock.close()

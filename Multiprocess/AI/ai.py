@@ -1,6 +1,6 @@
 import collections
 import codecs
-
+import copy
 
 class AI:
     colorMap = {
@@ -53,6 +53,12 @@ class AI:
                 value += player.Serialise() + ","
             return value[:-1]
 
+        def __eq__(self, other):
+            return self.serialise_state() == other.serialise_state()
+
+        def __ne__(self, other):
+            return self.serialise_state() != other.serialise_state()
+
     def __init__(self, index, is_ghost):
         self.id = index
         self.is_ghost = is_ghost
@@ -60,6 +66,10 @@ class AI:
         self.line = 0
         self.state = AI.State()
         self.check_turn = False
+        self.check_shadow = False
+        self.check_lock = False
+        self.check_red = False
+        self.is_init = False
         codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "w", "utf-8").close()
         self.log = codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "a", "utf-8")
 
@@ -74,6 +84,10 @@ class AI:
 
     def get_move(self, game, tile):
         raise NotImplemented("Method get_move is not implemented")
+
+    def __play__(self, line):
+        self.update_state()
+        return self.play(line)
 
     def play(self, line):
         raise NotImplemented("Method play is not implemented")
@@ -91,17 +105,17 @@ class AI:
         info = data.split("  ")
         self.parse_players(info)
         self.update_alone_states()
-        self.update_state_file()
 
     def parse_new_pos(self, data):
         suspect = data.replace(" ", "").split(":")[1]
         info = suspect.split("-")
         self.state.players[AI.colorMap[info[0]]].pos = info[1]
-        self.update_state_file()
 
     def parse_new_line(self, start, lines):
         for i in range(start, len(lines)):
+            old_state = copy.deepcopy(self.state)
             line = lines[i].rstrip()
+            print(line)
             if line == "**************************":
                 self.check_turn = True
             elif line == "****":
@@ -111,17 +125,44 @@ class AI:
                     self.parse_turn(line)
                 else:
                     self.parse_suspect(line)
+                    self.is_init = True
             elif line.startswith("NOUVEAU PLACEMENT"):
                 self.parse_new_pos(line)
+            elif line.startswith("QUESTION : Quelle salle obscurcir ?"):
+                self.check_shadow = True
+            elif self.check_shadow and line.startswith("REPONSE INTERPRETEE :"):
+                self.state.shadow = line.replace(" ", "").split(":")[1]
+                self.check_shadow = False
+            elif line.startswith("QUESTION : Quelle sortie ?"):
+                self.check_lock = True
+            elif self.check_lock and line.startswith("REPONSE INTERPRETEE :"):
+                r = line.replace(" ", "").split(":")[1].replace("{", "").replace("}", "").split(",")
+                self.state.lock1 = r[0]
+                self.state.lock2 = r[1]
+                self.check_lock = False
+            elif line.startswith("Pouvoir de rouge ac"):
+                self.check_red = True
+            elif self.check_red:
+                p = line.split(" ")[0]
+                if p == "fantome":
+                    self.state.score = str(int(self.state.score) + (-1 if self.is_ghost == 0 else 1))
+                else:
+                    self.parse_player(p)
+                self.check_red = False
+            if self.is_init and old_state != self.state:
+                self.update_state_file()
 
     def parse_second(self, txt):
         return txt.split(":")[1]
 
+    def parse_player(self, info):
+        player_data = info.split("-")
+        self.state.players[AI.colorMap[player_data[0]]].pos = player_data[1]
+        self.state.players[AI.colorMap[player_data[0]]].suspect = "0" if player_data[2] == "suspect" else "1"
+
     def parse_players(self, infos):
         for info in infos:
-            player_data = info.split("-")
-            self.state.players[AI.colorMap[player_data[0]]].pos = player_data[1]
-            self.state.players[AI.colorMap[player_data[0]]].suspect = "0" if player_data[2] == "suspect" else "1"
+            self.parse_player(info)
 
     def update_alone_states(self):
         for player in self.state.players.values():
