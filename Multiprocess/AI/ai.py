@@ -1,12 +1,15 @@
 class AI:
-    def OnTurnBegins(self):
-        raise NotImplemented("Method OnNewTurn is not implemented")
+    def on_turn_begins(self):
+        raise NotImplemented("Method on_new_turn is not implemented")
 
-    def PickTile(self, game, tiles):
-        raise NotImplemented("Method PickTile is not implemented")
+    def pick_tile(self, game, tiles):
+        raise NotImplemented("Method pick_tile is not implemented")
 
-    def GetPowerChoice(self, game, tile):
-        raise NotImplemented("Method UsePowerBeforeMove is not implemented")
+    def get_power_choice(self, game, tile):
+        raise NotImplemented("Method get_power_choice is not implemented")
 
-    def GetMove(self, game, tile):
-        raise NotImplemented("Method Move is not implemented")
+    def get_move(self, game, tile):
+        raise NotImplemented("Method get_move is not implemented")
+
+    def play(self, line):
+        raise NotImplemented("Method play is not implemented")

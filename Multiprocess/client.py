@@ -1,8 +1,8 @@
 import sys
 import getopt
 import socket
-import time
-from random import randrange
+import importlib.util
+import inspect
 
 
 class Client:
@@ -12,6 +12,13 @@ class Client:
         self.sock = None
         self.server_address = None
         self.is_ghost = is_ghost
+        spec = importlib.util.spec_from_file_location("client_ai", ia_file)
+        module_ia = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module_ia)
+        sys.modules["client_ai"] = module_ia
+        cls_members = inspect.getmembers(sys.modules["client_ai"], inspect.isclass)
+        ai = getattr(module_ia, cls_members[1][0])
+        self.ai = ai()
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -36,8 +43,8 @@ class Client:
             data = self.sock.recv(128)
             str_data = data.decode("utf-8")
             if str_data != "":
-                print(str_data)
-                self.sock.sendall(str(randrange(2)).encode())
+                data = self.ai.play(str_data)
+                self.sock.sendall(data.encode())
             else:
                 self.sock.close()
                 running = False
