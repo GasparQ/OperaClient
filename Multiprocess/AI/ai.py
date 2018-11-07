@@ -1,6 +1,8 @@
 import collections
 import codecs
 import copy
+import re
+
 
 class AI:
     colorMap = {
@@ -12,6 +14,17 @@ class AI:
         "marron": "brown",
         "noir": "black",
         "blanc": "white"
+    }
+
+    colorIndexMap = {
+        "rose": '0',
+        "rouge": '1',
+        "gris": '2',
+        "bleu": '3',
+        "violet": '4',
+        "marron": '5',
+        "noir": '6',
+        "blanc": '7'
     }
 
     class Player:
@@ -42,6 +55,7 @@ class AI:
             self.players["purple"] = AI.Player()
             self.players["red"] = AI.Player()
             self.players["white"] = AI.Player()
+            self.available = []
 
         def serialise_state(self):
             value = self.turn + ","
@@ -51,7 +65,13 @@ class AI:
             value += self.lock2 + ","
             for player in self.players.values():
                 value += player.Serialise() + ","
-            return value[:-1]
+            value += "("
+            for player in self.available:
+                value += player + ","
+            if len(self.available) > 0:
+                value = value[:-1]
+            value += ")"
+            return value
 
         def __eq__(self, other):
             return self.serialise_state() == other.serialise_state()
@@ -69,7 +89,7 @@ class AI:
         self.check_shadow = False
         self.check_lock = False
         self.check_red = False
-        self.is_init = False
+        self.choose = False
         codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "w", "utf-8").close()
         self.log = codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "a", "utf-8")
 
@@ -115,17 +135,14 @@ class AI:
         for i in range(start, len(lines)):
             old_state = copy.deepcopy(self.state)
             line = lines[i].rstrip()
-            print(line)
             if line == "**************************":
                 self.check_turn = True
-            elif line == "****":
-                self.check_turn = False
             elif self.check_turn:
                 if line.startswith("Tour"):
                     self.parse_turn(line)
                 else:
                     self.parse_suspect(line)
-                    self.is_init = True
+                    self.check_turn = False
             elif line.startswith("NOUVEAU PLACEMENT"):
                 self.parse_new_pos(line)
             elif line.startswith("QUESTION : Quelle salle obscurcir ?"):
@@ -147,22 +164,39 @@ class AI:
                 if p == "fantome":
                     self.state.score = str(int(self.state.score) + (-1 if self.is_ghost == 0 else 1))
                 else:
-                    self.parse_player(p)
+                    self.set_player_state(p)
                 self.check_red = False
-            if self.is_init and old_state != self.state:
+            elif line.startswith("QUESTION : Tuiles disponibles :"):
+                r = re.search("\[(.*)]", line).group(1).replace(" ", "").split(",")
+                self.state.available = []
+                for p in r:
+                    player_data = self.parse_player(p)
+                    self.state.available.append(AI.colorIndexMap[player_data[0]])
+                self.choose = True
+            elif self.choose and line.startswith("REPONSE INTERPRETEE :"):
+                p = self.parse_player(line.replace(" ", "").split(":")[1])
+                self.state.available.remove(AI.colorIndexMap[p[0]])
+                self.choose = False
+            if not self.check_turn and old_state != self.state:
                 self.update_state_file()
 
     def parse_second(self, txt):
         return txt.split(":")[1]
 
-    def parse_player(self, info):
-        player_data = info.split("-")
+    def set_player_state(self, info):
+        player_data = self.parse_player(info)
         self.state.players[AI.colorMap[player_data[0]]].pos = player_data[1]
         self.state.players[AI.colorMap[player_data[0]]].suspect = "0" if player_data[2] == "suspect" else "1"
 
+    @staticmethod
+    def parse_player(info):
+        player_data = info.split("-")
+        return player_data
+
     def parse_players(self, infos):
         for info in infos:
-            self.parse_player(info)
+            self.set_player_state(info)
+        self.state.available = ['0', '1', '2', '3', '4', '5', '6', '7']
 
     def update_alone_states(self):
         for player in self.state.players.values():
