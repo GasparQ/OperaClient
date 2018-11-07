@@ -1,7 +1,6 @@
 import sys
 import getopt
 import concurrent.futures
-# from multiprocessing.pool import ThreadPool
 import subprocess
 
 verbose = False
@@ -20,7 +19,7 @@ def start_server(index, detective, ghost):
                 print(str_line)
             if str_line.startswith("PORT:"):
                 port = str_line[5:]
-                executor, clients = start_clients(port, detective, ghost)
+                executor, clients = start_clients(port, detective, ghost, index)
             if str_line == "END SERVER":
                 running = False
                 server.communicate()
@@ -35,14 +34,14 @@ def start_server(index, detective, ghost):
     return 0
 
 
-def start_client(index, port, detective, ghost):
+def start_client(index, port, detective, ghost, server_id):
     global verbose
     if index == 0:
-        client = subprocess.Popen(["py", "./client.py", "-p", str(port), "-f", ghost, "-g", "True"],
-                                  shell=True, stdout=subprocess.PIPE)
+        client = subprocess.Popen(["py", "./client.py", "-p", str(port), "-f", ghost, "-g", "True",
+                                   "-s", str(server_id)], shell=True, stdout=subprocess.PIPE)
     else:
-        client = subprocess.Popen(["py", "./client.py", "-p", str(port), "-f", detective, "-g", "False"],
-                                  shell=True, stdout=subprocess.PIPE)
+        client = subprocess.Popen(["py", "./client.py", "-p", str(port), "-f", detective, "-g", "False",
+                                   "-s", str(server_id)], shell=True, stdout=subprocess.PIPE)
     running = True
     while running:
         line = client.stdout.readline()
@@ -55,10 +54,10 @@ def start_client(index, port, detective, ghost):
     return 0
 
 
-def start_clients(port, detective, ghost):
+def start_clients(port, detective, ghost, index):
     n_client = 2
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=n_client)
-    clients = {executor.submit(start_client, i, port, detective, ghost): i for i in range(n_client)}
+    clients = {executor.submit(start_client, i, port, detective, ghost, index): i for i in range(n_client)}
     return executor, clients
 
 

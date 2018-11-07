@@ -19,4 +19,5 @@ class Ghost(AI):
 
     def play(self, line):
         print("Ghost : " + line)
-        return str(random.randrange(2))
+        return str(random. randrange(2))
+

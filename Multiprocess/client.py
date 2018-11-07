@@ -6,7 +6,8 @@ import inspect
 
 
 class Client:
-    def __init__(self, port, ia_file, is_ghost):
+    def __init__(self, port, ia_file, is_ghost, server_id):
+        self.server_id = server_id
         self.port = port
         self.ia_file = ia_file
         self.sock = None
@@ -18,7 +19,7 @@ class Client:
         sys.modules["client_ai"] = module_ia
         cls_members = inspect.getmembers(sys.modules["client_ai"], inspect.isclass)
         ai = getattr(module_ia, cls_members[1][0])
-        self.ai = ai()
+        self.ai = ai(self.server_id, 0 if is_ghost else 1)
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,21 +44,24 @@ class Client:
             data = self.sock.recv(128)
             str_data = data.decode("utf-8")
             if str_data != "":
+                self.ai.update_state()
                 data = self.ai.play(str_data)
                 self.sock.sendall(data.encode())
             else:
                 self.sock.close()
+                self.ai.update_state()
+                self.ai.close()
                 running = False
         print("END")
 
 
-
 def parse_args(argv):
-    my_opts, args = getopt.getopt(argv[1:], "p:f:g:")
+    my_opts, args = getopt.getopt(argv[1:], "p:f:g:s:")
 
     port = 0
     file = ""
     is_ghost = False
+    server_id = 0
     for o, a in my_opts:
         if o == '-p':
             port = int(a)
@@ -65,15 +69,17 @@ def parse_args(argv):
             file = a
         elif o == "-g":
             is_ghost = a == "True"
+        elif o == "-s":
+            server_id = int(a)
         else:
             print("Usage: %s -p port -f ia.py" % sys.argv[0])
     # print("IA file : %s " % file)
-    return port, file, is_ghost
+    return port, file, is_ghost, server_id
 
 
 def main(argv):
-    port, file, is_ghost = parse_args(argv)
-    client = Client(port, file, is_ghost)
+    port, file, is_ghost, server_id = parse_args(argv)
+    client = Client(port, file, is_ghost, server_id)
     client.connect()
     client.run()
     pass

@@ -115,7 +115,7 @@ class Game:
         self.log = "./log_game_" + str(index) + ".txt"
         f = codecs.open(self.log, "w", "utf-8")
         f.close()
-        self.logfile = codecs.open(self.log, "a", "utf-8")
+        # self.logfile = codecs.open(self.log, "a", "utf-8")
         self.finished = False
         self.index = index
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -167,10 +167,12 @@ class Game:
                 running = False
         print("CLOSE SERVER")
         self.socket.close()
-        self.logfile.close()
+        # self.logfile.close()
 
     def message(self, texte):
-        self.logfile.write(texte + "\n")
+        logfile = codecs.open(self.log, "a", "utf-8")
+        logfile.write(texte + "\n")
+        logfile.close()
 
     def informer(self, texte):
         self.message(texte)
