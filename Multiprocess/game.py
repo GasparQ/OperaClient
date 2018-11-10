@@ -234,3 +234,11 @@ class Game:
         return "Tour:" + str(self.num_tour) + ", Score:" + str(self.start) + "/" + str(self.end) + ", Ombre:" + str(
             self.shadow) + ", Bloque:" + str(self.bloque) + "\n" + "  ".join([str(p) for p in self.personnages])
 
+    def init_from_state(self, state):
+        print(state)
+
+    @staticmethod
+    def generate_game_from_state(index, state):
+        game = Game(index)
+        game.init_from_state(state)
+        return game

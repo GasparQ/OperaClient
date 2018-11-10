@@ -2,6 +2,7 @@ import collections
 import codecs
 import copy
 import re
+import numpy as np
 
 
 class AI:
@@ -67,11 +68,20 @@ class AI:
                 value += player.Serialise() + ","
             value += "("
             for player in self.available:
-                value += player + ","
+                value += player + "-"
             if len(self.available) > 0:
                 value = value[:-1]
             value += ")"
             return value
+
+        def to_numpy(self):
+            txt = ""
+            for player in self.players.values():
+                txt += player.Serialise() + ","
+            txt = txt[:-1]
+            na = np.fromstring(txt, dtype=int, sep=',')
+            na = np.reshape(na, (8, 3))
+            return na
 
         def __eq__(self, other):
             return self.serialise_state() == other.serialise_state()
@@ -79,7 +89,17 @@ class AI:
         def __ne__(self, other):
             return self.serialise_state() != other.serialise_state()
 
-    def __init__(self, index, is_ghost):
+        def __repr__(self):
+            return self.serialise_state()
+
+        def count_suspect(self):
+            suspect = 0
+            for player in self.players.values():
+                if int(player.suspect) == 0:
+                    suspect += 1
+            return suspect
+
+    def __init__(self, index, is_ghost, train):
         self.id = index
         self.is_ghost = is_ghost
         self.score = -1
@@ -90,6 +110,7 @@ class AI:
         self.check_lock = False
         self.check_red = False
         self.choose = False
+        self.train = train
         codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "w", "utf-8").close()
         self.log = codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "a", "utf-8")
 
@@ -106,6 +127,7 @@ class AI:
         raise NotImplemented("Method get_move is not implemented")
 
     def __play__(self, line):
+        # print("__play__")
         self.update_state()
         return self.play(line)
 
@@ -175,8 +197,9 @@ class AI:
                 self.choose = True
             elif self.choose and line.startswith("REPONSE INTERPRETEE :"):
                 p = self.parse_player(line.replace(" ", "").split(":")[1])
-                self.state.available.remove(AI.colorIndexMap[p[0]])
-                self.choose = False
+                if p[0] != "False":
+                    self.state.available.remove(AI.colorIndexMap[p[0]])
+                    self.choose = False
             if not self.check_turn and old_state != self.state:
                 self.update_state_file()
 
@@ -221,3 +244,6 @@ class AI:
 
     def close(self):
         self.log.close()
+
+    def end(self):
+        raise NotImplemented("Method play is not implemented")
