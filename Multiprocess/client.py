@@ -6,7 +6,7 @@ import inspect
 
 
 class Client:
-    def __init__(self, port, ia_file, is_ghost, server_id):
+    def __init__(self, port, ia_file, is_ghost, server_id, train):
         self.server_id = server_id
         self.port = port
         self.ia_file = ia_file
@@ -18,8 +18,18 @@ class Client:
         spec.loader.exec_module(module_ia)
         sys.modules["client_ai"] = module_ia
         cls_members = inspect.getmembers(sys.modules["client_ai"], inspect.isclass)
-        ai = getattr(module_ia, cls_members[1][0])
-        self.ai = ai(self.server_id, 1 if is_ghost else 0)
+
+        tmp = ia_file.split("/")
+        name = tmp[len(tmp) - 1].split(".")[0]
+        ai = None
+        i = 0
+        for m in cls_members:
+            if str(m[0]).lower() == name:
+                ai = getattr(module_ia, cls_members[i][0])
+            i += 1
+        self.train = train
+        if ai is not None:
+            self.ai = ai(self.server_id, 1 if self.is_ghost else 0, self.train)
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,16 +61,18 @@ class Client:
                 self.ai.update_state()
                 self.ai.close()
                 running = False
+        self.ai.end()
         print("END")
 
 
 def parse_args(argv):
-    my_opts, args = getopt.getopt(argv[1:], "p:f:g:s:")
+    my_opts, args = getopt.getopt(argv[1:], "p:f:g:s:t:")
 
     port = 0
     file = ""
     is_ghost = False
     server_id = 0
+    train = False
     for o, a in my_opts:
         if o == '-p':
             port = int(a)
@@ -70,15 +82,17 @@ def parse_args(argv):
             is_ghost = a == "True"
         elif o == "-s":
             server_id = int(a)
+        elif o == "-t":
+            train = a == "True"
         else:
             print("Usage: %s -p port -f ia.py" % sys.argv[0])
     # print("IA file : %s " % file)
-    return port, file, is_ghost, server_id
+    return port, file, is_ghost, server_id, train
 
 
 def main(argv):
-    port, file, is_ghost, server_id = parse_args(argv)
-    client = Client(port, file, is_ghost, server_id)
+    port, file, is_ghost, server_id, train = parse_args(argv)
+    client = Client(port, file, is_ghost, server_id, train)
     client.connect()
     client.run()
     pass

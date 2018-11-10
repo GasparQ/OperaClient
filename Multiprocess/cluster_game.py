@@ -6,8 +6,9 @@ import subprocess
 verbose = False
 
 
-def start_server(index, detective, ghost):
+def start_server(index, detective, ghost, batches):
     global verbose
+    print("=================== REMAINING BATCHES {} ===================".format(batches))
     server = subprocess.Popen(["py", "./server.py", str(index)], shell=True, stdout=subprocess.PIPE)
     running = True
     clients = None
@@ -30,7 +31,9 @@ def start_server(index, detective, ghost):
         except Exception as exc:
             print('%r generated an exception: %s' % (s, exc))
         else:
-            return data
+            if batches > 0:
+                start_server(index, detective, ghost, batches - 1)
+                return data
     return 0
 
 
@@ -63,11 +66,12 @@ def start_clients(port, detective, ghost, index):
 
 def parse_args(argv):
     global verbose
-    my_opts, args = getopt.getopt(argv[1:], "d:g:n:v:")
+    my_opts, args = getopt.getopt(argv[1:], "d:g:n:v:b:")
 
     detective = ""
     ghost = ""
     num_game = 0
+    batches = 1
     for o, a in my_opts:
         if o == '-d':
             detective = a
@@ -77,17 +81,19 @@ def parse_args(argv):
             ghost = a
         elif o == "-v":
             verbose = a == "True"
+        elif o == '-b':
+            batches = int(a)
         else:
-            print("Usage: %s -n number_of_game -g ghost.py -d detective.py" % sys.argv[0])
+            print("Usage: %s -n number_of_server -g ghost.py -d detective.py -v verbose -b batches_by_server" % sys.argv[0])
     print("Detective file : %s and Ghost file: %s" % (detective, ghost))
-    return num_game, detective, ghost
+    return num_game, detective, ghost, batches
 
 
 def main(argv):
-    num_game, detective, ghost = parse_args(argv)
+    num_game, detective, ghost, batches = parse_args(argv)
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_game) as executor:
         # Start the load operations and mark each future with its URL
-        servers = {executor.submit(start_server, i, detective, ghost): i for i in range(num_game)}
+        servers = {executor.submit(start_server, i, detective, ghost, batches - 1): i for i in range(num_game)}
         for server in concurrent.futures.as_completed(servers):
             s = servers[server]
             try:
