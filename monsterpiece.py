@@ -18,6 +18,7 @@ class MonsterPiece(AI):
         self.epsilon = 0.9
         self.choosenAction = None
         self.moved = False
+        self.turns = 0
 
     """
         Train the model
@@ -26,6 +27,7 @@ class MonsterPiece(AI):
     def OnTurnEnds(self, game):
         reward = self.GetReward(game)
         self.UpdateValues(reward)
+        self.UpdateEpsilon()
 
     """
         Generates the possible actions for a turn and pick one in function of values
@@ -34,6 +36,22 @@ class MonsterPiece(AI):
         self.GeneratePossibleActions(game, tilesLeft)
         self.ChooseAction()
         self.moved = False
+
+    def SaveTo(self, filename):
+        file = open(filename, 'w')
+        print(self.epsilon, file=file)
+        for key, value in self.values.items():
+            print("{} {}", key, value, file=file)
+        file.close()
+
+    def LoadFrom(self, filename):
+        file = open(filename, 'r')
+        self.epsilon = float(file.readline())
+        lines = file.readline()
+        for line in lines:
+            key, value = line.split(' ')
+            self.values[key] = float(value)
+        file.close()
 
     @staticmethod
     def GetPowerStates(actions, character, which):
@@ -104,6 +122,12 @@ class MonsterPiece(AI):
                 self.values[state_hash] += 0.001 * (reward - self.values[state_hash])
 
         self.transitions = []
+
+    def UpdateEpsilon(self):
+        self.turns += 1
+        if self.turns % 10 == 0:
+            self.turns = 0
+            self.epsilon = max(self.epsilon * 0.9, 0.05)
 
     def PickTile(self, game, tiles):
         return self.choosenAction.actions[action.PICK]
