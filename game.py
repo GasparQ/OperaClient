@@ -117,6 +117,20 @@ class Board:
             ) for char in self.characters
         ])
 
+    def GetStateHash(self):
+        suspects = [0, 0]
+        innocents = [0, 0]
+        for character in self.characters:
+            alone = 0
+            if character.position == self.shadow or len(self.rooms[character.position]) == 1:
+                alone = 1
+            if character.innocent:
+                innocents[alone] += 1
+            else:
+                suspects[alone] += 1
+
+        return '{}-{}-{}-{}'.format(suspects[0] / 8.0, suspects[1] / 8.0, innocents[0] / 8.0, innocents[1] / 8.0)
+
 
 class Game:
     def __init__(self, board, players):
