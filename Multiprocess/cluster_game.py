@@ -2,6 +2,7 @@ import sys
 import getopt
 import concurrent.futures
 import subprocess
+import os
 
 verbose = False
 
@@ -93,8 +94,20 @@ def parse_args(argv):
     return num_game, detective, ghost, batches
 
 
+def init_dirs():
+    if not os.path.exists("./logs"):
+        os.makedirs("./logs")
+    if not os.path.exists("./memories"):
+        os.makedirs("./memories")
+    if not os.path.exists("./states"):
+        os.makedirs("./states")
+    if not os.path.exists("./weights"):
+        os.makedirs("./weights")
+
+
 def main(argv):
     num_game, detective, ghost, batches = parse_args(argv)
+    init_dirs()
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_game) as executor:
         # Start the load operations and mark each future with its URL
         servers = {executor.submit(start_server, i, detective, ghost, batches): i for i in range(num_game)}

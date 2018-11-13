@@ -122,11 +122,16 @@ class Game:
         self.detective = None
         self.ghost = None
         self.joueurs = [Player(0, self), Player(1, self)]
-        self.reset()
+        self.initial_state()
 
     def reset(self):
+        self.ghost.sendall("RESET".encode())
+        self.detective.sendall("RESET".encode())
         # self.logfile = codecs.open(self.log, "a", "utf-8")
         codecs.open(self.log, "w", "utf-8").close()
+        self.initial_state()
+
+    def initial_state(self):
         self.finished = False
         self.start, self.end, self.num_tour, self.shadow, x = 4, 22, 1, randrange(10), randrange(10)
         self.bloque = {x, passages[x].copy().pop()}
@@ -184,11 +189,15 @@ class Game:
                 if b == 0:
                     running = False
                 else:
-                    self.ghost.sendall("RESET".encode())
-                    self.detective.sendall("RESET".encode())
                     self.reset()
                     count += 1
         duration = time.process_time() - start
+        print("PERCENT:" + str(count))
+        self.print_stats(duration, batches, detective_count, ghost_count)
+        self.socket.close()
+        # self.logfile.close()
+
+    def print_stats(self, duration, batches, detective_count, ghost_count):
         print("STATS")
         print("\n+------------------------------------------------+")
         print("|                  SERVER STATS                  |")
@@ -218,8 +227,6 @@ class Game:
         else:
             print("|                   GHOST WIN                    |")
         print("+------------------------------------------------+")
-        # self.socket.close()
-        # self.logfile.close()
 
     def message(self, texte):
         logfile = codecs.open(self.log, "a", "utf-8")
