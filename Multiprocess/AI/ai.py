@@ -7,25 +7,13 @@ import numpy as np
 
 class AI:
     colorMap = {
-        "rose": "pink",
-        "rouge": "red",
-        "gris": "gray",
-        "bleu": "blue",
-        "violet": "purple",
-        "marron": "brown",
-        "noir": "black",
-        "blanc": "white"
+        "rose": "pink", "rouge": "red", "gris": "gray", "bleu": "blue",
+        "violet": "purple", "marron": "brown", "noir": "black", "blanc": "white"
     }
 
     colorIndexMap = {
-        "rose": '0',
-        "rouge": '1',
-        "gris": '2',
-        "bleu": '3',
-        "violet": '4',
-        "marron": '5',
-        "noir": '6',
-        "blanc": '7'
+        "rose": '0', "rouge": '1', "gris": '2', "bleu": '3',
+        "violet": '4', "marron": '5', "noir": '6', "blanc": '7'
     }
 
     class Player:
@@ -34,7 +22,7 @@ class AI:
             self.alone = ""
             self.suspect = ""
 
-        def Serialise(self):
+        def serialise(self):
             value = self.pos + ","
             value += self.alone + ","
             value += self.suspect
@@ -65,7 +53,7 @@ class AI:
             value += self.lock1 + ","
             value += self.lock2 + ","
             for player in self.players.values():
-                value += player.Serialise() + ","
+                value += player.serialise() + ","
             value += "("
             for player in self.available:
                 value += player + "-"
@@ -91,7 +79,7 @@ class AI:
         def to_numpy(self):
             txt = ""
             for player in self.players.values():
-                txt += player.Serialise() + ","
+                txt += player.serialise() + ","
             txt = txt[:-1]
             na = np.fromstring(txt, dtype=int, sep=',')
             return na.reshape((24, 1))
