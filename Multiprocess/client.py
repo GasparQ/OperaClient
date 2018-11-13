@@ -29,7 +29,7 @@ class Client:
             i += 1
         self.train = train
         if ai is not None:
-            self.ai = ai(self.server_id, 1 if self.is_ghost else 0, self.train)
+            self.ai = ai(self.server_id, 1 if self.is_ghost else 0)
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,16 +51,24 @@ class Client:
     def run(self):
         running = True
         while running:
-            data = self.sock.recv(128)
-            str_data = data.decode("utf-8")
-            if str_data != "":
-                data = self.ai.__play__(str_data)
-                self.sock.sendall(data.encode())
-            else:
-                self.sock.close()
+            try:
+                data = self.sock.recv(128)
+            except Exception as e:
                 self.ai.update_state()
+                self.sock.close()
                 self.ai.close()
                 running = False
+            else:
+                str_data = data.decode("utf-8")
+                if str_data != "":
+                    if str_data.rstrip() == "RESET":
+                        self.ai.end()
+                        self.ai.reset()
+                    if str_data.rstrip() == "REINFORCE":
+                        self.ai.replay_from_file()
+                    else:
+                        data = self.ai.__play__(str_data)
+                        self.sock.sendall(data.encode())
         self.ai.end()
         print("END")
 

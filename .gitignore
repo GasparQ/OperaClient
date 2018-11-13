@@ -60,3 +60,5 @@ target/
 \.idea/
 
 *.txt
+
+*.hdf5

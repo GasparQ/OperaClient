@@ -1,6 +1,7 @@
 import socket
 import codecs
 from random import shuffle,randrange
+import time
 
 permanents, deux, avant, apres = {'rose'}, {'rouge', 'gris', 'bleu'}, {'violet', 'marron'}, {'noir', 'blanc'}
 couleurs = avant | permanents | apres | deux
@@ -112,18 +113,21 @@ class Player:
 # Create a TCP/IP socket
 class Game:
     def __init__(self, index):
-        self.log = "./log_game_" + str(index) + ".txt"
-        f = codecs.open(self.log, "w", "utf-8")
-        f.close()
-        # self.logfile = codecs.open(self.log, "a", "utf-8")
-        self.finished = False
         self.index = index
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.log = "./logs/log_game_" + str(index) + ".txt"
+        codecs.open(self.log, "w", "utf-8") .close()
         self.server_address = ('localhost', 0)
         self.port = ""
         self.detective = None
         self.ghost = None
         self.joueurs = [Player(0, self), Player(1, self)]
+        self.reset()
+
+    def reset(self):
+        # self.logfile = codecs.open(self.log, "a", "utf-8")
+        codecs.open(self.log, "w", "utf-8").close()
+        self.finished = False
         self.start, self.end, self.num_tour, self.shadow, x = 4, 22, 1, randrange(10), randrange(10)
         self.bloque = {x, passages[x].copy().pop()}
         self.personnages = {Character(c) for c in couleurs}
@@ -147,8 +151,13 @@ class Game:
         # print('starting up on %s port %s' % self.server_address)
         return self.port
 
-    def run(self):
+    def run(self, batches):
         running = True
+        count = 0
+        detective_count = 0
+        ghost_count = 0
+        b = batches
+        start = time.perf_counter()
         while running:
             if self.detective is None or self.ghost is None:
                 # print("waiting connection")
@@ -163,10 +172,53 @@ class Game:
                 else:
                     print(data)
             else:
-                self.lancer()
-                running = False
-        print("CLOSE SERVER")
-        self.socket.close()
+                print("\n===================================== Start game n°{} =====================================\n".format(count))
+                score = self.lancer()
+                print("\n===================================== End game n°{} ! =====================================".format(count))
+                print("PERCENT:" + str(count))
+                if score > 0:
+                    detective_count += 1
+                else:
+                    ghost_count += 1
+                b -= 1
+                if b == 0:
+                    running = False
+                else:
+                    self.ghost.sendall("RESET".encode())
+                    self.detective.sendall("RESET".encode())
+                    self.reset()
+                    count += 1
+        duration = time.process_time() - start
+        print("STATS")
+        print("\n+------------------------------------------------+")
+        print("|                  SERVER STATS                  |")
+        print("+================================================+")
+        print("| Game played     |",
+              (str(batches) +
+               "                              ")[:29] + "|")
+        print("+------------------------------------------------+")
+        print("| Time played     |",
+              ("{} sec".format(duration) +
+               "                              ")[:29] + "|")
+        print("+------------------------------------------------+")
+        print("| Detective ratio |",
+              (str((detective_count / batches) * 100) +
+               "% ({}/{})".format(detective_count, batches) +
+               "                              ")[:29] + "|")
+        print("+------------------------------------------------+")
+        print("| Ghost ratio     |",
+              (str((ghost_count / batches) * 100) +
+               "% ({}/{})".format(ghost_count, batches) +
+               "                              ")[:29] + "|")
+        print("+================================================+")
+        if detective_count == ghost_count:
+            print("|                   DRAW GAMES                   |")
+        elif detective_count > ghost_count:
+            print("|                 DETECTIVE WIN                  |")
+        else:
+            print("|                   GHOST WIN                    |")
+        print("+------------------------------------------------+")
+        # self.socket.close()
         # self.logfile.close()
 
     def message(self, texte):
@@ -228,7 +280,9 @@ class Game:
             self.tour()
         self.informer("L'enquêteur a trouvé - c'était " + str(
             self.fantome) if self.start < self.end else "Le fantôme a gagné")
-        self.informer("Score final : " + str(self.end - self.start))
+        score = self.end - self.start
+        self.informer("Score final : " + str(score))
+        return score
 
     def __repr__(self):
         return "Tour:" + str(self.num_tour) + ", Score:" + str(self.start) + "/" + str(self.end) + ", Ombre:" + str(

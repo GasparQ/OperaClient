@@ -74,14 +74,27 @@ class AI:
             value += ")"
             return value
 
+        def from_csv(self, txt):
+            tmp = txt.split(",")
+            # self.turn = tmp[0]
+            # self.score = tmp[1]
+            # self.shadow = tmp[2]
+            # self.lock1 = tmp[3]
+            # self.lock2 = tmp[4]
+            i = 0
+            for player in self.players.values():
+                player.pos = tmp[5 + i]
+                player.alone = tmp[6 + i]
+                player.suspect = tmp[7 + i]
+                i += 3
+
         def to_numpy(self):
             txt = ""
             for player in self.players.values():
                 txt += player.Serialise() + ","
             txt = txt[:-1]
             na = np.fromstring(txt, dtype=int, sep=',')
-            na = np.reshape(na, (8, 3))
-            return na
+            return na.reshape((24, 1))
 
         def __eq__(self, other):
             return self.serialise_state() == other.serialise_state()
@@ -99,9 +112,10 @@ class AI:
                     suspect += 1
             return suspect
 
-    def __init__(self, index, is_ghost, train):
+    def __init__(self, index, is_ghost):
         self.id = index
         self.is_ghost = is_ghost
+
         self.score = -1
         self.line = 0
         self.state = AI.State()
@@ -110,9 +124,19 @@ class AI:
         self.check_lock = False
         self.check_red = False
         self.choose = False
-        self.train = train
-        codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "w", "utf-8").close()
-        self.log = codecs.open('./states_{}_{}.txt'.format(self.id, self.is_ghost), "a", "utf-8")
+
+        codecs.open('./states/states_{}_{}.txt'.format(self.id, self.is_ghost), "w", "utf-8").close()
+        self.log = codecs.open('./states/states_{}_{}.txt'.format(self.id, self.is_ghost), "a", "utf-8")
+
+    def reset(self):
+        self.score = -1
+        self.line = 0
+        self.state = AI.State()
+        self.check_turn = False
+        self.check_shadow = False
+        self.check_lock = False
+        self.check_red = False
+        self.choose = False
 
     def on_turn_begins(self):
         raise NotImplemented("Method on_new_turn is not implemented")
@@ -128,6 +152,9 @@ class AI:
 
     def __play__(self, line):
         # print("__play__")
+        # if line.startswith("@"):
+        #     self.update_state_tcp(line[1:])
+        #     return "@"
         self.update_state()
         return self.play(line)
 
@@ -153,55 +180,59 @@ class AI:
         info = suspect.split("-")
         self.state.players[AI.colorMap[info[0]]].pos = info[1]
 
+    def parse_line(self, line):
+        old_state = copy.deepcopy(self.state)
+        if line == "**************************":
+            self.check_turn = True
+        elif self.check_turn:
+            if line.startswith("Tour"):
+                self.parse_turn(line)
+            else:
+                self.parse_suspect(line)
+                self.check_turn = False
+        elif line.startswith("NOUVEAU PLACEMENT"):
+            self.parse_new_pos(line)
+        elif line.startswith("QUESTION : Quelle salle obscurcir ?"):
+            self.check_shadow = True
+        elif self.check_shadow and line.startswith("REPONSE INTERPRETEE :"):
+            self.state.shadow = line.replace(" ", "").split(":")[1]
+            self.check_shadow = False
+        elif line.startswith("QUESTION : Quelle sortie ?"):
+            self.check_lock = True
+        elif self.check_lock and line.startswith("REPONSE INTERPRETEE :"):
+            r = line.replace(" ", "").split(":")[1].replace("{", "").replace("}", "").split(",")
+            self.state.lock1 = r[0]
+            self.state.lock2 = r[1]
+            self.check_lock = False
+        elif line.startswith("Pouvoir de rouge ac"):
+            self.check_red = True
+        elif self.check_red:
+            p = line.split(" ")[0]
+            if p == "fantome":
+                self.state.score = str(int(self.state.score) + (-1 if self.is_ghost == 0 else 1))
+            else:
+                self.set_player_state(p)
+            self.check_red = False
+        elif line.startswith("QUESTION : Tuiles disponibles :"):
+            r = re.search("\[(.*)]", line).group(1).replace(" ", "").split(",")
+            self.state.available = []
+            for p in r:
+                player_data = self.parse_player(p)
+                self.state.available.append(AI.colorIndexMap[player_data[0]])
+            self.choose = True
+        elif self.choose and line.startswith("REPONSE INTERPRETEE :"):
+            p = self.parse_player(line.replace(" ", "").split(":")[1])
+            if p[0] != "False":
+                self.state.available.remove(AI.colorIndexMap[p[0]])
+                self.choose = False
+        if not self.check_turn and old_state != self.state:
+            self.update_state_file()
+
     def parse_new_line(self, start, lines):
         for i in range(start, len(lines)):
-            old_state = copy.deepcopy(self.state)
             line = lines[i].rstrip()
-            if line == "**************************":
-                self.check_turn = True
-            elif self.check_turn:
-                if line.startswith("Tour"):
-                    self.parse_turn(line)
-                else:
-                    self.parse_suspect(line)
-                    self.check_turn = False
-            elif line.startswith("NOUVEAU PLACEMENT"):
-                self.parse_new_pos(line)
-            elif line.startswith("QUESTION : Quelle salle obscurcir ?"):
-                self.check_shadow = True
-            elif self.check_shadow and line.startswith("REPONSE INTERPRETEE :"):
-                self.state.shadow = line.replace(" ", "").split(":")[1]
-                self.check_shadow = False
-            elif line.startswith("QUESTION : Quelle sortie ?"):
-                self.check_lock = True
-            elif self.check_lock and line.startswith("REPONSE INTERPRETEE :"):
-                r = line.replace(" ", "").split(":")[1].replace("{", "").replace("}", "").split(",")
-                self.state.lock1 = r[0]
-                self.state.lock2 = r[1]
-                self.check_lock = False
-            elif line.startswith("Pouvoir de rouge ac"):
-                self.check_red = True
-            elif self.check_red:
-                p = line.split(" ")[0]
-                if p == "fantome":
-                    self.state.score = str(int(self.state.score) + (-1 if self.is_ghost == 0 else 1))
-                else:
-                    self.set_player_state(p)
-                self.check_red = False
-            elif line.startswith("QUESTION : Tuiles disponibles :"):
-                r = re.search("\[(.*)]", line).group(1).replace(" ", "").split(",")
-                self.state.available = []
-                for p in r:
-                    player_data = self.parse_player(p)
-                    self.state.available.append(AI.colorIndexMap[player_data[0]])
-                self.choose = True
-            elif self.choose and line.startswith("REPONSE INTERPRETEE :"):
-                p = self.parse_player(line.replace(" ", "").split(":")[1])
-                if p[0] != "False":
-                    self.state.available.remove(AI.colorIndexMap[p[0]])
-                    self.choose = False
-            if not self.check_turn and old_state != self.state:
-                self.update_state_file()
+            self.parse_line(line)
+
 
     def parse_second(self, txt):
         return txt.split(":")[1]
@@ -235,12 +266,16 @@ class AI:
         self.log.write(state + "\n")
 
     def update_state(self):
-        infos = open('./log_game_{}.txt'.format(self.id), 'r')
+        infos = open('./logs/log_game_{}.txt'.format(self.id), 'r')
         lines = infos.readlines()
         if len(lines) != self.line:
             self.parse_new_line(self.line, lines)
             self.line = len(lines)
         infos.close()
+
+    def update_state_tcp(self, line):
+        # print("===>", line, "<===")
+        self.parse_line(line)
 
     def close(self):
         self.log.close()

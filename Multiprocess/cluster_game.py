@@ -8,20 +8,26 @@ verbose = False
 
 def start_server(index, detective, ghost, batches):
     global verbose
-    print("=================== REMAINING BATCHES {} ===================".format(batches))
-    server = subprocess.Popen(["py", "./server.py", str(index)], shell=True, stdout=subprocess.PIPE)
+    print("=================== SERVER ({}) REMAINING BATCHES {} ===================".format(index, batches))
+    server = subprocess.Popen(["py", "./server.py", "-i", str(index), "-b", str(batches)], shell=True, stdout=subprocess.PIPE)
     running = True
     clients = None
+    stats = False
     while running:
         line = server.stdout.readline()
         if line != '':
             str_line = line.rstrip().decode("utf-8")
-            if verbose:
-                print(str_line)
+            if (verbose and not str_line.startswith("PERCENT")) or stats:
+                print("  ", str_line)
+            elif not verbose and str_line.startswith("PERCENT:"):
+                p = int(str_line.split(":")[1])
+                print("Batches {}/{} = {}%".format(p, batches, round((p / batches) * 100, 2)))
             if str_line.startswith("PORT:"):
                 port = str_line[5:]
                 executor, clients = start_clients(port, detective, ghost, index)
-            if str_line == "END SERVER":
+            elif str_line == "STATS":
+                stats = not stats
+            elif str_line == "END SERVER":
                 running = False
                 server.communicate()
     for client in concurrent.futures.as_completed(clients):
@@ -31,9 +37,7 @@ def start_server(index, detective, ghost, batches):
         except Exception as exc:
             print('%r generated an exception: %s' % (s, exc))
         else:
-            if batches > 0:
-                start_server(index, detective, ghost, batches - 1)
-                return data
+            return data
     return 0
 
 
@@ -53,7 +57,7 @@ def start_client(index, port, detective, ghost, server_id):
             if str_line == "END":
                 running = False
             elif verbose:
-                print(str_line)
+                print("    ", str_line)
     return 0
 
 
@@ -93,7 +97,7 @@ def main(argv):
     num_game, detective, ghost, batches = parse_args(argv)
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_game) as executor:
         # Start the load operations and mark each future with its URL
-        servers = {executor.submit(start_server, i, detective, ghost, batches - 1): i for i in range(num_game)}
+        servers = {executor.submit(start_server, i, detective, ghost, batches): i for i in range(num_game)}
         for server in concurrent.futures.as_completed(servers):
             s = servers[server]
             try:
@@ -101,7 +105,6 @@ def main(argv):
             except Exception as exc:
                 print('%r generated an exception: %s' % (s, exc))
             else:
-                print("end")
                 return data
 
 
