@@ -45,6 +45,7 @@ class AI:
             self.players["red"] = AI.Player()
             self.players["white"] = AI.Player()
             self.available = []
+            self.repPowerAvailable = []
 
         def serialise_state(self):
             value = self.turn + ","
@@ -139,10 +140,9 @@ class AI:
         raise NotImplemented("Method get_move is not implemented")
 
     def __play__(self, line):
-        # print("__play__")
-        # if line.startswith("@"):
-        #     self.update_state_tcp(line[1:])
-        #     return "@"
+        # print(">>" + line)
+        if line.startswith("Score final :"):
+            return "END GAME"
         self.update_state()
         return self.play(line)
 
@@ -221,8 +221,8 @@ class AI:
             line = lines[i].rstrip()
             self.parse_line(line)
 
-
-    def parse_second(self, txt):
+    @staticmethod
+    def parse_second(txt):
         return txt.split(":")[1]
 
     def set_player_state(self, info):

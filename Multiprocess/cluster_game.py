@@ -77,7 +77,10 @@ def start_client(index: int, port: int, detective: str, ghost: str, server_id: i
             if str_line == "END":
                 running = False
             elif verbose:
-                print("    ", str_line)
+                if index == 0:
+                    print("    Ghost :", str_line)
+                else:
+                    print("    Detective :", str_line)
     return 0
 
 

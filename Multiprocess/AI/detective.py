@@ -18,7 +18,7 @@ class Detective(AI):
         return random.choice(game.board.GetPossibleMoves(tile))
 
     def play(self, line):
-        # print("Detective : " + line)
+        # print(line)
         return str(random.randrange(6))
 
     def end(self):

@@ -39,7 +39,7 @@ class Ghost(ReinforcedAI):
 
     def play(self, line):
         # print("Ghost.play()")
-        print("Ghost : " + line)
+        print(line)
         if line.startswith("Tuiles disponibles :"):
             if self.prev_action != -1:
                 reward = self.state.count_suspect() - self.prev_state.count_suspect()
@@ -51,7 +51,7 @@ class Ghost(ReinforcedAI):
             for i in range(0, len(self.state.available)):
                 if int(self.state.available[i]) == character:
                     character = i
-            print("Ghost : ", character)
+            print(character)
             return str(character)
         if line.startswith("positions disponibles :"):
             if self.prev_action != -1:
@@ -62,12 +62,13 @@ class Ghost(ReinforcedAI):
             self.prev_state = copy.deepcopy(self.state)
             self.prev_action = pos
             pos -= 8
-            print("Ghost : ", pos)
+            print(pos)
             return str(pos)
         return super().play(line)
 
     def end(self):
-        if 22 - int(self.state.score) <= 0:
+        print(self.state.score)
+        if int(self.state.score) <= 0:
             print("WIN")
             reward = 10
         else:

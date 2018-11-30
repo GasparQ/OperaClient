@@ -88,6 +88,11 @@ class Client:
                     else:
                         data = self.ai.__play__(str_data)
                         self.sock.sendall(data.encode())
+                else:
+                    self.ai.update_state()
+                    self.sock.close()
+                    self.ai.close()
+                    running = False
         self.ai.end()
         print("END")
 

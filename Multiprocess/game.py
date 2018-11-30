@@ -195,6 +195,11 @@ class OperaGame(Game):
         self.cards += ['fantome'] * 3
         self.active_tiles = []
 
+        shuffle(self.tiles)
+        shuffle(self.cards)
+        for i, p in enumerate(self.tiles):
+            p.position = i
+
     @property
     def get_active_tiles(self) -> []:
         return self.active_tiles
@@ -291,6 +296,20 @@ class OperaGame(Game):
                     "\n===================================== Start game n°{} =====================================\n".format(
                         count))
                 score = self.start_game()
+                end_client = False
+                # while not end_client:
+                #     self.ghost.sendall("_".encode())
+                #     data = self.ghost.recv(128)
+                #     s = data.decode("utf-8").rstrip()
+                #     if s == "END GAME":
+                #         end_client = True
+                # end_client = False
+                # while not end_client:
+                #     self.detective.sendall("_".encode())
+                #     data = self.detective.recv(128)
+                #     s = data.decode("utf-8").rstrip()
+                #     if s == "END GAME":
+                #         end_client = True
                 print(
                     "\n===================================== End game n°{} ! =====================================".format(
                         count))

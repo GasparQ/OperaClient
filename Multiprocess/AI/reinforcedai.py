@@ -4,7 +4,6 @@ import sys
 from collections import deque
 import numpy as np
 from Multiprocess.AI.ai import AI
-import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 stderr = sys.stderr
 sys.stderr = open(os.devnull, 'w')
@@ -28,7 +27,7 @@ class ReinforcedAI(AI):
 
         self.learning_rate = learning_rate
         self.model = self._build_model()
-        # self.model.summary()
+        self.model.summary()
         # self.load('./weights/weight_{}_{}_{}.hdf5'.format(self.id, self.is_ghost, 17627))
         self.prev_action = -1
         self.prev_state = -1
@@ -75,7 +74,8 @@ class ReinforcedAI(AI):
     def get_move(self, game, tile):
         return random.choice(game.board.GetPossibleMoves(tile))
 
-    def pick_random_choice(self, choices, available):
+    @staticmethod
+    def pick_random_choice(choices, available):
         dice = random.randrange(0, available)
         j = 0
         for i in range(0, len(choices)):
@@ -107,7 +107,8 @@ class ReinforcedAI(AI):
         return choice
 
     def choose_position(self, line):
-        available = line.replace(", choisir la valeur", "").split(":")[1].replace(" ", "").replace("{", "").replace("}", "").split(",")
+        available = line.replace(", choisir la valeur",
+                                 "").split(":")[1].replace(" ", "").replace("{", "").replace("}", "").split(",")
         actions_turn_0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         available_len = range(0, len(available))
         for i in range(8, len(actions_turn_0)):
@@ -189,4 +190,3 @@ class ReinforcedAI(AI):
     def play(self, line):
         # print("ReinforcedAI.play()")
         return str(random. randrange(2))
-
